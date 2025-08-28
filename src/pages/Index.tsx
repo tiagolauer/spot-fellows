@@ -1,17 +1,41 @@
 import { useState } from "react";
-import { MapPin, Users, Clock, User } from "lucide-react";
+import { MapPin, Users, Clock, UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { UserCard, PaymentModal, type User } from "@/components/UserCard";
 
 // Mock data para demonstração
-const mockUsers = [
-  { id: 1, name: "Ana Silva", avatar: "AS", checkedInAt: new Date(Date.now() - 120000) },
-  { id: 2, name: "Carlos Lima", avatar: "CL", checkedInAt: new Date(Date.now() - 240000) },
-  { id: 3, name: "Maria Santos", avatar: "MS", checkedInAt: new Date(Date.now() - 180000) },
+const mockUsers: User[] = [
+  { 
+    id: 1, 
+    name: "Ana Silva", 
+    avatar: "AS", 
+    checkedInAt: new Date(Date.now() - 120000),
+    instagram: "@ana.silva",
+    whatsapp: "(11) 99999-1234",
+    contactUnlocked: false
+  },
+  { 
+    id: 2, 
+    name: "Carlos Lima", 
+    avatar: "CL", 
+    checkedInAt: new Date(Date.now() - 240000),
+    instagram: "@carlos.lima",
+    whatsapp: "(11) 98888-5678",
+    contactUnlocked: false
+  },
+  { 
+    id: 3, 
+    name: "Maria Santos", 
+    avatar: "MS", 
+    checkedInAt: new Date(Date.now() - 180000),
+    whatsapp: "(11) 97777-9012",
+    contactUnlocked: true // Já desbloqueado para demonstração
+  },
 ];
 
 const mockLocation = "Shopping Center Norte";
@@ -19,7 +43,12 @@ const mockLocation = "Shopping Center Norte";
 const Index = () => {
   const [hasCheckedIn, setHasCheckedIn] = useState(false);
   const [showUsers, setShowUsers] = useState(false);
+  const [users, setUsers] = useState<User[]>(mockUsers);
   const [currentUser] = useState({ id: 0, name: "Você", avatar: "VC" });
+  const [paymentModal, setPaymentModal] = useState<{ isOpen: boolean; user: User | null }>({
+    isOpen: false,
+    user: null
+  });
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -36,9 +65,23 @@ const Index = () => {
     return `${minutes} min atrás`;
   };
 
+  const handleUnlockContact = (user: User) => {
+    setPaymentModal({ isOpen: true, user });
+  };
+
+  const handlePaymentSuccess = (userId: number) => {
+    setUsers(prevUsers => 
+      prevUsers.map(user => 
+        user.id === userId 
+          ? { ...user, contactUnlocked: true }
+          : user
+      )
+    );
+  };
+
   const activeUsers = hasCheckedIn 
-    ? [{ ...currentUser, checkedInAt: new Date() }, ...mockUsers]
-    : mockUsers;
+    ? [{ ...currentUser, checkedInAt: new Date(), contactUnlocked: true }, ...users]
+    : users;
 
   return (
     <div className="min-h-screen bg-background">
@@ -50,7 +93,7 @@ const Index = () => {
               I've Been Here
             </h1>
             <Button variant="ghost" size="icon" onClick={() => navigate("/profile")}>
-              <User className="h-5 w-5" />
+              <UserIcon className="h-5 w-5" />
             </Button>
           </div>
         </div>
@@ -108,34 +151,12 @@ const Index = () => {
 
           {showUsers && (
             <div className="space-y-3">
-              {activeUsers.map((user, index) => (
-                <Card key={user.id || "current-user"} className="bg-gradient-card shadow-card border-0">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <Avatar className="h-12 w-12">
-                          <AvatarImage src="" />
-                          <AvatarFallback className="bg-gradient-primary text-primary-foreground font-bold">
-                            {user.avatar}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium">{user.name}</p>
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            <Clock className="h-3 w-3 mr-1" />
-                            {index === 0 && hasCheckedIn ? "Agora" : formatTimeAgo(user.checkedInAt)}
-                          </div>
-                        </div>
-                      </div>
-                      <Badge 
-                        variant="secondary" 
-                        className="bg-primary/10 text-primary border-primary/20"
-                      >
-                        Ativo
-                      </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
+              {activeUsers.map((user) => (
+                <UserCard
+                  key={user.id || "current-user"}
+                  user={user}
+                  onUnlockContact={handleUnlockContact}
+                />
               ))}
             </div>
           )}
@@ -170,6 +191,14 @@ const Index = () => {
             </Card>
           )}
         </div>
+
+        {/* Payment Modal */}
+        <PaymentModal
+          isOpen={paymentModal.isOpen}
+          onClose={() => setPaymentModal({ isOpen: false, user: null })}
+          user={paymentModal.user}
+          onPaymentSuccess={handlePaymentSuccess}
+        />
       </main>
     </div>
   );
