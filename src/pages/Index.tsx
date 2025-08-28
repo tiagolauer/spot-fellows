@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 // Mock data para demonstração
 const mockUsers = [
@@ -20,6 +21,7 @@ const Index = () => {
   const [showUsers, setShowUsers] = useState(false);
   const [currentUser] = useState({ id: 0, name: "Você", avatar: "VC" });
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleCheckIn = () => {
     setHasCheckedIn(true);
@@ -47,7 +49,7 @@ const Index = () => {
             <h1 className="text-2xl font-bold bg-gradient-hero bg-clip-text text-transparent">
               I've Been Here
             </h1>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/profile")}>
               <User className="h-5 w-5" />
             </Button>
           </div>
