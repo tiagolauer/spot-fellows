@@ -68,13 +68,13 @@ const Index = () => {
             .then(res => res.json())
             .then(data => {
               if (data.address) {
-                // Preferir road, mas aceitar pedestrian, footway, ou path
                 const rua = data.address.road || data.address.pedestrian || data.address.footway || data.address.path;
                 const numero = data.address.house_number || "";
-                if (rua) {
-                  setLocation(numero ? `${rua}, ${numero}` : rua);
+                if (rua && numero) {
+                  setLocation(`${rua}, ${numero}`);
+                } else if (rua) {
+                  setLocation(rua);
                 } else if (data.display_name) {
-                  // Fallback: mostrar parte inicial do display_name
                   setLocation(data.display_name.split(",")[0]);
                 } else {
                   setLocation(`Lat: ${latitude.toFixed(5)}, Lon: ${longitude.toFixed(5)}`);
