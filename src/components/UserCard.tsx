@@ -9,8 +9,9 @@ import { useToast } from "@/hooks/use-toast";
 
 interface User {
   id: number;
-  name: string;
+  name: string; // nome completo
   avatar: string;
+  avatarUrl?: string;
   checkedInAt: Date;
   instagram?: string;
   whatsapp?: string;
@@ -66,7 +67,7 @@ const PaymentModal = ({ isOpen, onClose, user, onPaymentSuccess }: PaymentModalP
               </AvatarFallback>
             </Avatar>
             <div>
-              <p className="font-medium">{user.name}</p>
+              <p className="font-medium">{user.name.split(' ')[0]}</p>
               <p className="text-sm text-muted-foreground">Contato bloqueado</p>
             </div>
           </div>
@@ -153,22 +154,61 @@ const UserCard = ({ user, onUnlockContact }: UserCardProps) => {
   const hasContacts = user.instagram || user.whatsapp;
   const showContacts = user.contactUnlocked && hasContacts;
 
+  // Separar nome e sobrenome
+  const [firstName, ...rest] = user.name.split(' ');
+  const lastName = rest.join(' ');
+
+  const [editAvatarUrl, setEditAvatarUrl] = useState(user.avatarUrl || "");
+  const [isEditingAvatar, setIsEditingAvatar] = useState(false);
+
   return (
     <Card className="bg-gradient-card shadow-card border-0">
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <Avatar className="h-12 w-12">
-              <AvatarFallback className="bg-gradient-primary text-primary-foreground font-bold">
-                {user.avatar}
-              </AvatarFallback>
+              {editAvatarUrl || user.avatarUrl ? (
+                <AvatarImage src={editAvatarUrl || user.avatarUrl} />
+              ) : (
+                <AvatarFallback className="bg-gradient-primary text-primary-foreground font-bold">
+                  {user.avatar}
+                </AvatarFallback>
+              )}
             </Avatar>
             <div>
-              <p className="font-medium">{user.name}</p>
+              <p className="font-medium">
+                {firstName}
+                {showContacts && lastName ? ` ${lastName}` : ''}
+              </p>
               <div className="flex items-center text-sm text-muted-foreground">
                 <div className="h-2 w-2 bg-green-500 rounded-full mr-2" />
                 {formatTimeAgo(user.checkedInAt)}
               </div>
+              {isEditingAvatar && (
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={e => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (ev) => {
+                        setEditAvatarUrl(ev.target?.result as string);
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  className="mt-1"
+                />
+              )}
+              <Button
+                variant="outline"
+                size="xs"
+                className="mt-1"
+                onClick={() => setIsEditingAvatar(!isEditingAvatar)}
+              >
+                {isEditingAvatar ? "Salvar Foto" : "Alterar Foto"}
+              </Button>
             </div>
           </div>
           

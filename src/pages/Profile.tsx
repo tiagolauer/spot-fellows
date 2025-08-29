@@ -20,6 +20,7 @@ const Profile = () => {
     instagram: "",
     whatsapp: "",
     avatar: "JS",
+    avatarUrl: "",
     totalCheckins: 23,
     placesVisited: 15,
     joinedDate: "Janeiro 2024"
@@ -106,14 +107,35 @@ const Profile = () => {
           <CardContent className="p-6">
             <div className="flex flex-col items-center text-center space-y-4">
               <Avatar className="h-24 w-24">
-                <AvatarImage src="" />
-                <AvatarFallback className="bg-gradient-primary text-primary-foreground text-2xl font-bold">
-                  {profile.avatar}
-                </AvatarFallback>
+                {editProfile.avatarUrl || profile.avatarUrl ? (
+                  <AvatarImage src={isEditing ? editProfile.avatarUrl : profile.avatarUrl} />
+                ) : (
+                  <AvatarFallback className="bg-gradient-primary text-primary-foreground text-2xl font-bold">
+                    {profile.avatar}
+                  </AvatarFallback>
+                )}
               </Avatar>
-              
               {isEditing ? (
                 <div className="w-full max-w-sm space-y-3">
+                  <div>
+                    <Label htmlFor="avatar">Foto de Perfil</Label>
+                    <Input
+                      id="avatar"
+                      type="file"
+                      accept="image/*"
+                      onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (ev) => {
+                            setEditProfile({ ...editProfile, avatarUrl: ev.target?.result as string });
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      className="mt-1"
+                    />
+                  </div>
                   <div>
                     <Label htmlFor="name">Nome</Label>
                     <Input

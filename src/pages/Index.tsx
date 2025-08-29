@@ -1,87 +1,132 @@
-import { useState } from "react";
-import { MapPin, Users, Clock, UserIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
-import { UserCard, PaymentModal, type User } from "@/components/UserCard";
+import { useState, useEffect } from "react"
+import { MapPin, Users, Clock, UserIcon } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { useToast } from "@/hooks/use-toast"
+import { useNavigate } from "react-router-dom"
+import { UserCard, PaymentModal, type User } from "@/components/UserCard"
 
 // Mock data para demonstração
 const mockUsers: User[] = [
-  { 
-    id: 1, 
-    name: "Ana Silva", 
-    avatar: "AS", 
+  {
+    id: 1,
+    name: "Ana Silva",
+    avatar: "AS",
     checkedInAt: new Date(Date.now() - 120000),
     instagram: "@ana.silva",
     whatsapp: "(11) 99999-1234",
     contactUnlocked: false
   },
-  { 
-    id: 2, 
-    name: "Carlos Lima", 
-    avatar: "CL", 
+  {
+    id: 2,
+    name: "Carlos Lima",
+    avatar: "CL",
     checkedInAt: new Date(Date.now() - 240000),
     instagram: "@carlos.lima",
     whatsapp: "(11) 98888-5678",
     contactUnlocked: false
   },
-  { 
-    id: 3, 
-    name: "Maria Santos", 
-    avatar: "MS", 
+  {
+    id: 3,
+    name: "Maria Santos",
+    avatar: "MS",
     checkedInAt: new Date(Date.now() - 180000),
     whatsapp: "(11) 97777-9012",
     contactUnlocked: true // Já desbloqueado para demonstração
-  },
-];
+  }
+]
 
-const mockLocation = "Shopping Center Norte";
+const mockLocation = "Shopping Center Norte"
 
 const Index = () => {
-  const [hasCheckedIn, setHasCheckedIn] = useState(false);
-  const [showUsers, setShowUsers] = useState(false);
-  const [users, setUsers] = useState<User[]>(mockUsers);
-  const [currentUser] = useState({ id: 0, name: "Você", avatar: "VC" });
-  const [paymentModal, setPaymentModal] = useState<{ isOpen: boolean; user: User | null }>({
+  const [hasCheckedIn, setHasCheckedIn] = useState(false)
+  const [showUsers, setShowUsers] = useState(false)
+  const [users, setUsers] = useState<User[]>(mockUsers)
+  const [currentUser] = useState({ id: 0, name: "Você", avatar: "VC" })
+  const [paymentModal, setPaymentModal] = useState<{
+    isOpen: boolean
+    user: User | null
+  }>({
     isOpen: false,
     user: null
-  });
-  const { toast } = useToast();
-  const navigate = useNavigate();
+  })
+  const [location, setLocation] = useState<string>("Detectando localização...");
+  const [coords, setCoords] = useState<{lat: number, lon: number} | null>(null);
+  const { toast } = useToast()
+  const navigate = useNavigate()
 
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        position => {
+          const { latitude, longitude, accuracy } = position.coords;
+          setCoords({ lat: latitude, lon: longitude });
+          setLocation("Buscando endereço...");
+          fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1&accept-language=pt-BR`)
+            .then(res => res.json())
+            .then(data => {
+              if (data.address) {
+                // Preferir road, mas aceitar pedestrian, footway, ou path
+                const rua = data.address.road || data.address.pedestrian || data.address.footway || data.address.path;
+                const numero = data.address.house_number || "";
+                if (rua) {
+                  setLocation(numero ? `${rua}, ${numero}` : rua);
+                } else if (data.display_name) {
+                  // Fallback: mostrar parte inicial do display_name
+                  setLocation(data.display_name.split(",")[0]);
+                } else {
+                  setLocation(`Lat: ${latitude.toFixed(5)}, Lon: ${longitude.toFixed(5)}`);
+                }
+              } else {
+                setLocation(`Lat: ${latitude.toFixed(5)}, Lon: ${longitude.toFixed(5)}`);
+              }
+            })
+            .catch(() => {
+              setLocation(`Lat: ${latitude.toFixed(5)}, Lon: ${longitude.toFixed(5)}`);
+            });
+        },
+        error => {
+          setLocation("Não foi possível obter a localização");
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    } else {
+      setLocation("Geolocalização não suportada");
+    }
+  }, []);
   const handleCheckIn = () => {
-    setHasCheckedIn(true);
+    setHasCheckedIn(true)
     toast({
       title: "Check-in realizado!",
-      description: `Você fez check-in em ${mockLocation}`,
-    });
-  };
+      description: `Você fez check-in em ${mockLocation}`
+    })
+  }
 
   const formatTimeAgo = (date: Date) => {
-    const minutes = Math.floor((Date.now() - date.getTime()) / 60000);
-    return `${minutes} min atrás`;
-  };
+    const minutes = Math.floor((Date.now() - date.getTime()) / 60000)
+    return `${minutes} min atrás`
+  }
 
   const handleUnlockContact = (user: User) => {
-    setPaymentModal({ isOpen: true, user });
-  };
+    setPaymentModal({ isOpen: true, user })
+  }
 
   const handlePaymentSuccess = (userId: number) => {
-    setUsers(prevUsers => 
-      prevUsers.map(user => 
-        user.id === userId 
-          ? { ...user, contactUnlocked: true }
-          : user
+    setUsers(prevUsers =>
+      prevUsers.map(user =>
+        user.id === userId ? { ...user, contactUnlocked: true } : user
       )
-    );
-  };
+    )
+  }
 
-  const activeUsers = hasCheckedIn 
-    ? [{ ...currentUser, checkedInAt: new Date(), contactUnlocked: true }, ...users]
-    : users;
+  const activeUsers = hasCheckedIn
+    ? [
+        { ...currentUser, checkedInAt: new Date(), contactUnlocked: true },
+        ...users
+      ]
+    : users
 
   return (
     <div className="min-h-screen bg-background">
@@ -92,7 +137,11 @@ const Index = () => {
             <h1 className="text-2xl font-bold bg-gradient-hero bg-clip-text text-transparent">
               I've Been Here
             </h1>
-            <Button variant="ghost" size="icon" onClick={() => navigate("/profile")}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/profile")}
+            >
               <UserIcon className="h-5 w-5" />
             </Button>
           </div>
@@ -106,11 +155,9 @@ const Index = () => {
           <CardContent className="p-6 text-center">
             <div className="flex items-center justify-center mb-4">
               <MapPin className="h-6 w-6 text-primary mr-2" />
-              <h2 className="text-xl font-semibold">{mockLocation}</h2>
+              <h2 className="text-xl font-semibold">{location}</h2>
             </div>
-            <p className="text-muted-foreground">
-              Localização atual detectada
-            </p>
+            <p className="text-muted-foreground">Localização atual detectada</p>
           </CardContent>
         </Card>
 
@@ -123,9 +170,10 @@ const Index = () => {
             disabled={hasCheckedIn}
             className={`
               h-24 w-64 text-xl font-bold rounded-2xl
-              ${hasCheckedIn 
-                ? "bg-secondary text-secondary-foreground" 
-                : "bg-gradient-hero hover:shadow-glow animate-pulse-glow"
+              ${
+                hasCheckedIn
+                  ? "bg-secondary text-secondary-foreground"
+                  : "bg-gradient-hero hover:shadow-glow animate-pulse-glow"
               }
             `}
           >
@@ -151,7 +199,7 @@ const Index = () => {
 
           {showUsers && (
             <div className="space-y-3">
-              {activeUsers.map((user) => (
+              {activeUsers.map(user => (
                 <UserCard
                   key={user.id || "current-user"}
                   user={user}
@@ -167,25 +215,27 @@ const Index = () => {
                 <div className="flex items-center justify-center space-x-2 mb-2">
                   <div className="flex -space-x-2">
                     {activeUsers.slice(0, 3).map((user, index) => (
-                      <Avatar key={index} className="h-8 w-8 border-2 border-background">
+                      <Avatar
+                        key={index}
+                        className="h-8 w-8 border-2 border-background"
+                      >
                         <AvatarFallback className="bg-gradient-primary text-primary-foreground text-xs font-bold">
                           {user.avatar}
                         </AvatarFallback>
                       </Avatar>
                     ))}
                   </div>
-                  <Badge 
-                    variant="secondary" 
+                  <Badge
+                    variant="secondary"
                     className="bg-primary/10 text-primary border-primary/20"
                   >
                     {activeUsers.length}
                   </Badge>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {activeUsers.length === 1 
-                    ? "pessoa está aqui agora" 
-                    : "pessoas estão aqui agora"
-                  }
+                  {activeUsers.length === 1
+                    ? "pessoa está aqui agora"
+                    : "pessoas estão aqui agora"}
                 </p>
               </CardContent>
             </Card>
@@ -201,7 +251,7 @@ const Index = () => {
         />
       </main>
     </div>
-  );
-};
+  )
+}
 
-export default Index;
+export default Index
