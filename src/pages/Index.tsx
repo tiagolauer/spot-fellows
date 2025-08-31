@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { MapPin, Users, Clock, UserIcon } from "lucide-react"
+import { MapPin, Users, Clock, UserIcon, LogIn } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { useNavigate } from "react-router-dom"
 import { UserCard, PaymentModal, type User } from "@/components/UserCard"
+import { supabase } from "@/integrations/supabase/client"
+import { Session, User as SupabaseUser } from "@supabase/supabase-js"
 
 // Mock data para demonstração
 const mockUsers: User[] = [
@@ -41,10 +43,13 @@ const mockUsers: User[] = [
 const mockLocation = "Shopping Center Norte"
 
 const Index = () => {
+  const [session, setSession] = useState<Session | null>(null)
+  const [user, setUser] = useState<SupabaseUser | null>(null)
+  const [loading, setLoading] = useState(true)
   const [hasCheckedIn, setHasCheckedIn] = useState(false)
   const [showUsers, setShowUsers] = useState(false)
   const [users, setUsers] = useState<User[]>(mockUsers)
-  const [currentUser] = useState({ id: 0, name: "Você", avatar: "VC" })
+  const [currentUser, setCurrentUser] = useState({ id: 0, name: "Você", avatar: "VC" })
   const [paymentModal, setPaymentModal] = useState<{
     isOpen: boolean
     user: User | null
@@ -56,6 +61,51 @@ const Index = () => {
   const [coords, setCoords] = useState<{lat: number, lon: number} | null>(null);
   const { toast } = useToast()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session)
+        setUser(session?.user ?? null)
+        setLoading(false)
+        
+        // Update current user info when authenticated
+        if (session?.user) {
+          const firstName = session.user.user_metadata?.first_name || ""
+          const lastName = session.user.user_metadata?.last_name || ""
+          const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase() || "VC"
+          
+          setCurrentUser({
+            id: 0,
+            name: `${firstName} ${lastName}`.trim() || "Você",
+            avatar: initials
+          })
+        }
+      }
+    )
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+      setUser(session?.user ?? null)
+      setLoading(false)
+      
+      if (session?.user) {
+        const firstName = session.user.user_metadata?.first_name || ""
+        const lastName = session.user.user_metadata?.last_name || ""
+        const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase() || "VC"
+        
+        setCurrentUser({
+          id: 0,
+          name: `${firstName} ${lastName}`.trim() || "Você",
+          avatar: initials
+        })
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -96,6 +146,24 @@ const Index = () => {
       setLocation("Geolocalização não suportada");
     }
   }, []);
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut()
+      toast({
+        title: "Logout realizado com sucesso!",
+        description: "Até logo!"
+      })
+    } catch (error) {
+      console.error("Logout error:", error)
+      toast({
+        title: "Erro ao fazer logout",
+        description: "Tente novamente",
+        variant: "destructive"
+      })
+    }
+  }
+
   const handleCheckIn = () => {
     setHasCheckedIn(true)
     toast({
@@ -126,7 +194,50 @@ const Index = () => {
         { ...currentUser, checkedInAt: new Date(), contactUnlocked: true },
         ...users
       ]
-    : users
+      : users
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!session || !user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background flex flex-col items-center justify-center p-4">
+        <Card className="w-full max-w-md bg-card/80 backdrop-blur-sm shadow-card">
+          <CardContent className="pt-6 text-center space-y-6">
+            <div className="space-y-2">
+              <h1 className="text-3xl font-bold bg-gradient-hero bg-clip-text text-transparent">
+                I've Been Here
+              </h1>
+              <p className="text-muted-foreground">
+                Conecte-se com pessoas que estiveram nos mesmos lugares que você
+              </p>
+            </div>
+            <div className="space-y-3">
+              <Button 
+                onClick={() => navigate("/auth")} 
+                className="w-full bg-gradient-hero hover:shadow-glow"
+                size="lg"
+              >
+                <LogIn className="mr-2 h-4 w-4" />
+                Entrar ou Cadastrar-se
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Faça login para descobrir quem esteve nos mesmos lugares que você
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -137,13 +248,22 @@ const Index = () => {
             <h1 className="text-2xl font-bold bg-gradient-hero bg-clip-text text-transparent">
               I've Been Here
             </h1>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate("/profile")}
-            >
-              <UserIcon className="h-5 w-5" />
-            </Button>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate("/profile")}
+              >
+                <UserIcon className="h-5 w-5" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLogout}
+              >
+                Sair
+              </Button>
+            </div>
           </div>
         </div>
       </header>
