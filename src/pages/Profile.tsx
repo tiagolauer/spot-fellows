@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { ArrowLeft, Instagram, MessageCircle, Save, Edit, User } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ArrowLeft, Instagram, MessageCircle, Save, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -8,33 +8,161 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import type { User, Session } from "@supabase/supabase-js";
 
 const Profile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   
   const [profile, setProfile] = useState({
-    name: "João Silva",
-    bio: "Adoro descobrir novos lugares e compartilhar experiências!",
+    name: "",
+    bio: "",
     instagram: "",
     whatsapp: "",
-    avatar: "JS",
+    avatar: "",
     avatarUrl: "",
-    totalCheckins: 23,
-    placesVisited: 15,
-    joinedDate: "Janeiro 2024"
+    totalCheckins: 0,
+    placesVisited: 0,
+    joinedDate: ""
   });
 
   const [editProfile, setEditProfile] = useState(profile);
 
-  const handleSave = () => {
-    setProfile(editProfile);
-    setIsEditing(false);
-    toast({
-      title: "Perfil atualizado!",
-      description: "Suas informações foram salvas com sucesso.",
+  // Authentication and data loading
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (!session?.user) {
+          navigate("/auth");
+          return;
+        }
+
+        // Load user profile data
+        setTimeout(() => {
+          loadUserProfile(session.user.id);
+        }, 0);
+      }
+    );
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (!session?.user) {
+        navigate("/auth");
+        return;
+      }
+
+      loadUserProfile(session.user.id);
     });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
+  const loadUserProfile = async (userId: string) => {
+    try {
+      const { data: userData, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error loading profile:', error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar seu perfil.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (userData) {
+        const profileData = {
+          name: userData.name || "",
+          bio: userData.bio || "",
+          instagram: userData.instagram || "",
+          whatsapp: userData.whatsapp || "",
+          avatar: userData.name ? userData.name.split(' ').map(n => n[0]).join('').toUpperCase() : "",
+          avatarUrl: userData.avatar_url || "",
+          totalCheckins: 0, // TODO: Calculate from future check-ins table
+          placesVisited: 0, // TODO: Calculate from future check-ins table  
+          joinedDate: userData.joined_at ? 
+            new Date(userData.joined_at).toLocaleDateString('pt-BR', { 
+              month: 'long', 
+              year: 'numeric' 
+            }) : ""
+        };
+        setProfile(profileData);
+        setEditProfile(profileData);
+      }
+    } catch (error) {
+      console.error('Error loading profile:', error);
+      toast({
+        title: "Erro",
+        description: "Erro inesperado ao carregar perfil.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+      
+      const { error } = await supabase
+        .from('users')
+        .update({
+          name: editProfile.name.trim(),
+          bio: editProfile.bio.trim(),
+          instagram: editProfile.instagram.trim(),
+          whatsapp: editProfile.whatsapp.trim(),
+          avatar_url: editProfile.avatarUrl
+        })
+        .eq('id', user.id);
+
+      if (error) {
+        console.error('Error updating profile:', error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível salvar as alterações.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setProfile({
+        ...editProfile,
+        avatar: editProfile.name ? editProfile.name.split(' ').map(n => n[0]).join('').toUpperCase() : ""
+      });
+      setIsEditing(false);
+      
+      toast({
+        title: "Perfil atualizado!",
+        description: "Suas informações foram salvas com sucesso.",
+      });
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast({
+        title: "Erro",
+        description: "Erro inesperado ao salvar perfil.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCancel = () => {
@@ -77,6 +205,7 @@ const Profile = () => {
             <Button
               variant={isEditing ? "default" : "outline"}
               size="sm"
+              disabled={loading}
               onClick={() => {
                 if (isEditing) {
                   handleSave();
@@ -88,7 +217,7 @@ const Profile = () => {
               {isEditing ? (
                 <>
                   <Save className="h-4 w-4 mr-1" />
-                  Salvar
+                  {loading ? "Salvando..." : "Salvar"}
                 </>
               ) : (
                 <>
