@@ -2,9 +2,10 @@ import { useState } from "react";
 import { X, Lock, CreditCard, Instagram, MessageCircle, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 
 interface User {
@@ -203,7 +204,7 @@ const UserCard = ({ user, onUnlockContact }: UserCardProps) => {
               )}
               <Button
                 variant="outline"
-                size="xs"
+                size="sm"
                 className="mt-1"
                 onClick={() => setIsEditingAvatar(!isEditingAvatar)}
               >
