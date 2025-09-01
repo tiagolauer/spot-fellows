@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
-import { MapPin, Users, Clock, UserIcon, LogIn } from "lucide-react"
+import { MapPin, Users, Clock, UserIcon, LogIn, RefreshCw, Heart } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
@@ -9,38 +9,8 @@ import { useNavigate } from "react-router-dom"
 import { UserCard, PaymentModal, type User } from "@/components/UserCard"
 import { supabase } from "@/integrations/supabase/client"
 import { Session, User as SupabaseUser } from "@supabase/supabase-js"
-
-// Mock data para demonstração
-const mockUsers: User[] = [
-  {
-    id: 1,
-    name: "Ana Silva",
-    avatar: "AS",
-    checkedInAt: new Date(Date.now() - 120000),
-    instagram: "@ana.silva",
-    whatsapp: "(11) 99999-1234",
-    contactUnlocked: false
-  },
-  {
-    id: 2,
-    name: "Carlos Lima",
-    avatar: "CL",
-    checkedInAt: new Date(Date.now() - 240000),
-    instagram: "@carlos.lima",
-    whatsapp: "(11) 98888-5678",
-    contactUnlocked: false
-  },
-  {
-    id: 3,
-    name: "Maria Santos",
-    avatar: "MS",
-    checkedInAt: new Date(Date.now() - 180000),
-    whatsapp: "(11) 97777-9012",
-    contactUnlocked: true // Já desbloqueado para demonstração
-  }
-]
-
-const mockLocation = "Shopping Center Norte"
+import { useGeolocation } from "@/hooks/useGeolocation"
+import { useNearbyUsers } from "@/hooks/useNearbyUsers"
 
 const Index = () => {
   const [session, setSession] = useState<Session | null>(null)
@@ -48,7 +18,6 @@ const Index = () => {
   const [loading, setLoading] = useState(true)
   const [hasCheckedIn, setHasCheckedIn] = useState(false)
   const [showUsers, setShowUsers] = useState(false)
-  const [users, setUsers] = useState<User[]>(mockUsers)
   const [currentUser, setCurrentUser] = useState({ id: 0, name: "Você", avatar: "VC" })
   const [paymentModal, setPaymentModal] = useState<{
     isOpen: boolean
@@ -57,10 +26,12 @@ const Index = () => {
     isOpen: false,
     user: null
   })
-  const [location, setLocation] = useState<string>("Detectando localização...");
-  const [coords, setCoords] = useState<{lat: number, lon: number} | null>(null);
   const { toast } = useToast()
   const navigate = useNavigate()
+  
+  // Usar os novos hooks
+  const { location: geoLocation, loading: locationLoading, error: locationError, refreshLocation } = useGeolocation()
+  const { users: nearbyUsers, loading: usersLoading, refreshUsers } = useNearbyUsers()
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -107,45 +78,12 @@ const Index = () => {
     return () => subscription.unsubscribe()
   }, [])
 
+  // Atualizar usuários próximos quando a localização mudar
   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        position => {
-          const { latitude, longitude, accuracy } = position.coords;
-          setCoords({ lat: latitude, lon: longitude });
-          setLocation("Buscando endereço...");
-          fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1&accept-language=pt-BR`)
-            .then(res => res.json())
-            .then(data => {
-              if (data.address) {
-                const rua = data.address.road || data.address.pedestrian || data.address.footway || data.address.path;
-                const numero = data.address.house_number || "";
-                if (rua && numero) {
-                  setLocation(`${rua}, ${numero}`);
-                } else if (rua) {
-                  setLocation(rua);
-                } else if (data.display_name) {
-                  setLocation(data.display_name.split(",")[0]);
-                } else {
-                  setLocation(`Lat: ${latitude.toFixed(5)}, Lon: ${longitude.toFixed(5)}`);
-                }
-              } else {
-                setLocation(`Lat: ${latitude.toFixed(5)}, Lon: ${longitude.toFixed(5)}`);
-              }
-            })
-            .catch(() => {
-              setLocation(`Lat: ${latitude.toFixed(5)}, Lon: ${longitude.toFixed(5)}`);
-            });
-        },
-        error => {
-          setLocation("Não foi possível obter a localização");
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-      );
-    } else {
-      setLocation("Geolocalização não suportada");
+    if (geoLocation && session) {
+      refreshUsers(geoLocation.latitude, geoLocation.longitude, 1000); // 1km de raio
     }
-  }, []);
+  }, [geoLocation, session])
 
   const handleLogout = async () => {
     try {
@@ -165,11 +103,19 @@ const Index = () => {
   }
 
   const handleCheckIn = () => {
-    setHasCheckedIn(true)
-    toast({
-      title: "Check-in realizado!",
-      description: `Você fez check-in em ${mockLocation}`
-    })
+    if (geoLocation?.formattedAddress) {
+      setHasCheckedIn(true)
+      toast({
+        title: "Check-in realizado!",
+        description: `Você fez check-in em: ${geoLocation.formattedAddress}`,
+      })
+    } else {
+      toast({
+        title: "Erro",
+        description: "Localização não disponível para check-in",
+        variant: "destructive"
+      })
+    }
   }
 
   const formatTimeAgo = (date: Date) => {
@@ -182,21 +128,11 @@ const Index = () => {
   }
 
   const handlePaymentSuccess = (userId: number) => {
-    setUsers(prevUsers =>
-      prevUsers.map(user =>
-        user.id === userId ? { ...user, contactUnlocked: true } : user
-      )
-    )
+    // Atualizar o status de contato desbloqueado no estado local
+    // Em uma implementação real, isso seria feito no backend
   }
 
-  const activeUsers = hasCheckedIn
-    ? [
-        { ...currentUser, checkedInAt: new Date(), contactUnlocked: true },
-        ...users
-      ]
-      : users
-
-  if (loading) {
+  if (loading || locationLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
@@ -275,7 +211,24 @@ const Index = () => {
           <CardContent className="p-6 text-center">
             <div className="flex items-center justify-center mb-4">
               <MapPin className="h-6 w-6 text-primary mr-2" />
-              <h2 className="text-xl font-semibold">{location}</h2>
+              <h2 className="text-xl font-semibold">
+                {locationError ? (
+                  <span className="text-destructive">{locationError}</span>
+                ) : geoLocation?.formattedAddress ? (
+                  geoLocation.formattedAddress
+                ) : (
+                  "Detectando localização..."
+                )}
+              </h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={refreshLocation}
+                disabled={locationLoading}
+                className="ml-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${locationLoading ? 'animate-spin' : ''}`} />
+              </Button>
             </div>
             <p className="text-muted-foreground">Localização atual detectada</p>
           </CardContent>
@@ -287,7 +240,7 @@ const Index = () => {
             variant={hasCheckedIn ? "secondary" : "default"}
             size="lg"
             onClick={handleCheckIn}
-            disabled={hasCheckedIn}
+            disabled={hasCheckedIn || !geoLocation}
             className={`
               h-24 w-64 text-xl font-bold rounded-2xl
               ${
@@ -297,7 +250,14 @@ const Index = () => {
               }
             `}
           >
-            {hasCheckedIn ? "✓ Você está aqui!" : "Eu estive aqui"}
+            {hasCheckedIn ? (
+              <>
+                <Heart className="mr-2 h-6 w-6 text-pink-200" />
+                Você está aqui!
+              </>
+            ) : (
+              "Eu estive aqui"
+            )}
           </Button>
         </div>
 
@@ -307,55 +267,97 @@ const Index = () => {
             <h3 className="text-lg font-semibold flex items-center">
               <Users className="h-5 w-5 mr-2 text-primary" />
               Quem está aqui?
+              <Badge variant="secondary" className="ml-2">
+                {nearbyUsers.length}
+              </Badge>
             </h3>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setShowUsers(!showUsers)}
+              disabled={nearbyUsers.length === 0}
             >
               {showUsers ? "Ocultar" : "Ver todos"}
             </Button>
           </div>
 
-          {showUsers && (
+          {usersLoading ? (
+            <Card className="bg-gradient-card shadow-card border-0">
+              <CardContent className="p-6 text-center">
+                <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                <p className="text-sm text-muted-foreground">
+                  Procurando pessoas por perto...
+                </p>
+              </CardContent>
+            </Card>
+          ) : showUsers && nearbyUsers.length > 0 ? (
             <div className="space-y-3">
-              {activeUsers.map(user => (
-                <UserCard
-                  key={user.id || "current-user"}
-                  user={user}
-                  onUnlockContact={handleUnlockContact}
-                />
-              ))}
+              {nearbyUsers.map(user => {
+                // Converter para o formato esperado pelo UserCard
+                const userForCard: User = {
+                  id: parseInt(user.id), // Converter UUID para number temporariamente
+                  name: user.name,
+                  avatar: user.avatar_url || `https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face`,
+                  checkedInAt: new Date(user.last_location_update),
+                  instagram: '', // Seria vindo do banco
+                  whatsapp: '', // Seria vindo do banco
+                  contactUnlocked: false
+                };
+                
+                return (
+                  <UserCard
+                    key={user.id}
+                    user={userForCard}
+                    onUnlockContact={handleUnlockContact}
+                  />
+                );
+              })}
             </div>
-          )}
-
-          {!showUsers && (
+          ) : !showUsers ? (
             <Card className="bg-gradient-card shadow-card border-0">
               <CardContent className="p-6 text-center">
                 <div className="flex items-center justify-center space-x-2 mb-2">
-                  <div className="flex -space-x-2">
-                    {activeUsers.slice(0, 3).map((user, index) => (
-                      <Avatar
-                        key={index}
-                        className="h-8 w-8 border-2 border-background"
+                  {nearbyUsers.length > 0 ? (
+                    <>
+                      <div className="flex -space-x-2">
+                        {nearbyUsers.slice(0, 3).map((user, index) => (
+                          <Avatar
+                            key={index}
+                            className="h-8 w-8 border-2 border-background"
+                          >
+                            <AvatarImage src={user.avatar_url} />
+                            <AvatarFallback className="bg-gradient-primary text-primary-foreground text-xs font-bold">
+                              {user.name.split(' ').map(n => n[0]).join('')}
+                            </AvatarFallback>
+                          </Avatar>
+                        ))}
+                      </div>
+                      <Badge
+                        variant="secondary"
+                        className="bg-primary/10 text-primary border-primary/20"
                       >
-                        <AvatarFallback className="bg-gradient-primary text-primary-foreground text-xs font-bold">
-                          {user.avatar}
-                        </AvatarFallback>
-                      </Avatar>
-                    ))}
-                  </div>
-                  <Badge
-                    variant="secondary"
-                    className="bg-primary/10 text-primary border-primary/20"
-                  >
-                    {activeUsers.length}
-                  </Badge>
+                        {nearbyUsers.length}
+                      </Badge>
+                    </>
+                  ) : (
+                    <Users className="h-12 w-12 text-muted-foreground/50" />
+                  )}
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {activeUsers.length === 1
+                  {nearbyUsers.length === 0
+                    ? "Nenhuma pessoa por perto no momento"
+                    : nearbyUsers.length === 1
                     ? "pessoa está aqui agora"
                     : "pessoas estão aqui agora"}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="bg-gradient-card shadow-card border-0">
+              <CardContent className="p-6 text-center">
+                <Users className="h-12 w-12 mx-auto mb-2 text-muted-foreground/50" />
+                <p className="text-sm text-muted-foreground">
+                  Nenhuma pessoa encontrada por perto
                 </p>
               </CardContent>
             </Card>
