@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client"
 import { Session, User as SupabaseUser } from "@supabase/supabase-js"
 import { useGeolocation } from "@/hooks/useGeolocation"
 import { useNearbyUsers } from "@/hooks/useNearbyUsers"
+import { useCheckIns } from "@/hooks/useCheckIns"
 
 const Index = () => {
   const [session, setSession] = useState<Session | null>(null)
@@ -32,6 +33,7 @@ const Index = () => {
   // Usar os novos hooks
   const { location: geoLocation, loading: locationLoading, error: locationError, refreshLocation } = useGeolocation()
   const { users: nearbyUsers, loading: usersLoading, refreshUsers } = useNearbyUsers()
+  const { canCheckIn, nextCheckInTime, saveCheckIn } = useCheckIns()
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -102,13 +104,14 @@ const Index = () => {
     }
   }
 
-  const handleCheckIn = () => {
-    if (geoLocation?.formattedAddress) {
-      setHasCheckedIn(true)
-      toast({
-        title: "Check-in realizado!",
-        description: `Você fez check-in em: ${geoLocation.formattedAddress}`,
-      })
+  const handleCheckIn = async () => {
+    if (geoLocation) {
+      const success = await saveCheckIn(geoLocation)
+      if (success) {
+        setHasCheckedIn(true)
+        // Refresh nearby users after check-in
+        refreshUsers(geoLocation.latitude, geoLocation.longitude, 1000)
+      }
     } else {
       toast({
         title: "Erro",
@@ -235,18 +238,20 @@ const Index = () => {
         </Card>
 
         {/* Check-in Button */}
-        <div className="flex justify-center">
+        <div className="flex flex-col items-center space-y-2">
           <Button
             variant={hasCheckedIn ? "secondary" : "default"}
             size="lg"
             onClick={handleCheckIn}
-            disabled={hasCheckedIn || !geoLocation}
+            disabled={hasCheckedIn || !geoLocation || !canCheckIn}
             className={`
               h-24 w-64 text-xl font-bold rounded-2xl
               ${
                 hasCheckedIn
                   ? "bg-secondary text-secondary-foreground"
-                  : "bg-gradient-hero hover:shadow-glow animate-pulse-glow"
+                  : canCheckIn
+                  ? "bg-gradient-hero hover:shadow-glow animate-pulse-glow"
+                  : "bg-muted text-muted-foreground cursor-not-allowed"
               }
             `}
           >
@@ -255,10 +260,20 @@ const Index = () => {
                 <Heart className="mr-2 h-6 w-6 text-pink-200" />
                 Você está aqui!
               </>
+            ) : !canCheckIn ? (
+              <>
+                <Clock className="mr-2 h-6 w-6" />
+                Aguarde para check-in
+              </>
             ) : (
               "Eu estive aqui"
             )}
           </Button>
+          {!canCheckIn && nextCheckInTime && (
+            <p className="text-sm text-muted-foreground">
+              Próximo check-in disponível em: {Math.ceil((nextCheckInTime.getTime() - Date.now()) / 1000 / 60)} min
+            </p>
+          )}
         </div>
 
         {/* Who's Here Section */}
@@ -309,6 +324,7 @@ const Index = () => {
                     key={user.id}
                     user={userForCard}
                     onUnlockContact={handleUnlockContact}
+                    isCurrentUser={false}
                   />
                 );
               })}

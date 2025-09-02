@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, Instagram, MessageCircle, Save, Edit } from "lucide-react";
+import { ArrowLeft, Instagram, MessageCircle, Save, Edit, MapPin, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
+import { useCheckIns } from "@/hooks/useCheckIns";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -18,6 +19,7 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const { checkIns } = useCheckIns();
   
   const [profile, setProfile] = useState({
     name: "",
@@ -93,16 +95,24 @@ const Profile = () => {
           whatsapp: userData.whatsapp || "",
           avatar: userData.name ? userData.name.split(' ').map(n => n[0]).join('').toUpperCase() : "",
           avatarUrl: userData.avatar_url || "",
-          totalCheckins: 0, // TODO: Calculate from future check-ins table
-          placesVisited: 0, // TODO: Calculate from future check-ins table  
+          totalCheckins: 0, // Will be updated by checkIns hook
+          placesVisited: 0, // Will be updated by checkIns hook
           joinedDate: userData.joined_at ? 
             new Date(userData.joined_at).toLocaleDateString('pt-BR', { 
               month: 'long', 
               year: 'numeric' 
             }) : ""
         };
-        setProfile(profileData);
-        setEditProfile(profileData);
+        setProfile({
+          ...profileData,
+          totalCheckins: checkIns.length,
+          placesVisited: new Set(checkIns.map(ci => ci.city || ci.formatted_address)).size
+        });
+        setEditProfile({
+          ...profileData,
+          totalCheckins: checkIns.length,
+          placesVisited: new Set(checkIns.map(ci => ci.city || ci.formatted_address)).size
+        });
       }
     } catch (error) {
       console.error('Error loading profile:', error);
@@ -412,6 +422,51 @@ const Profile = () => {
                 Membro desde {profile.joinedDate}
               </p>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Timeline de Check-ins */}
+        <Card className="bg-gradient-card shadow-card border-0">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <MapPin className="h-5 w-5 mr-2 text-primary" />
+              Timeline de Check-ins
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {checkIns.length > 0 ? (
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {checkIns.map((checkIn) => (
+                  <div key={checkIn.id} className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg">
+                    <div className="flex-shrink-0 mt-1">
+                      <div className="w-3 h-3 bg-primary rounded-full"></div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {checkIn.formatted_address}
+                      </p>
+                      <div className="flex items-center text-xs text-muted-foreground mt-1">
+                        <Calendar className="h-3 w-3 mr-1" />
+                        {new Date(checkIn.checked_in_at).toLocaleString('pt-BR', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <MapPin className="h-12 w-12 mx-auto mb-2 text-muted-foreground/50" />
+                <p className="text-sm text-muted-foreground">
+                  Nenhum check-in realizado ainda
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 

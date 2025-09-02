@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      check_ins: {
+        Row: {
+          checked_in_at: string
+          city: string | null
+          country: string | null
+          created_at: string
+          formatted_address: string | null
+          id: string
+          latitude: number | null
+          location_point: unknown | null
+          longitude: number | null
+          postal_code: string | null
+          state: string | null
+          street_name: string | null
+          street_number: string | null
+          user_id: string
+        }
+        Insert: {
+          checked_in_at?: string
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          formatted_address?: string | null
+          id?: string
+          latitude?: number | null
+          location_point?: unknown | null
+          longitude?: number | null
+          postal_code?: string | null
+          state?: string | null
+          street_name?: string | null
+          street_number?: string | null
+          user_id: string
+        }
+        Update: {
+          checked_in_at?: string
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          formatted_address?: string | null
+          id?: string
+          latitude?: number | null
+          location_point?: unknown | null
+          longitude?: number | null
+          postal_code?: string | null
+          state?: string | null
+          street_name?: string | null
+          street_number?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       spatial_ref_sys: {
         Row: {
           auth_name: string | null
@@ -609,6 +660,10 @@ export type Database = {
         Args: { "": number }
         Returns: string
       }
+      get_user_last_checkin: {
+        Args: { p_user_id: string }
+        Returns: string
+      }
       gettransactionid: {
         Args: Record<PropertyKey, never>
         Returns: unknown
@@ -821,6 +876,20 @@ export type Database = {
       }
       postgis_wagyu_version: {
         Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      save_checkin: {
+        Args: {
+          p_city?: string
+          p_country?: string
+          p_formatted_address?: string
+          p_latitude: number
+          p_longitude: number
+          p_postal_code?: string
+          p_state?: string
+          p_street_name?: string
+          p_street_number?: string
+        }
         Returns: string
       }
       spheroid_in: {

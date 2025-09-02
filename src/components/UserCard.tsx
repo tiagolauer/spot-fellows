@@ -30,6 +30,13 @@ const PaymentModal = ({ isOpen, onClose, user, onPaymentSuccess }: PaymentModalP
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
 
+  if (!user) return null;
+
+  // Check what contact info is available
+  const hasInstagram = user.instagram && user.instagram.trim() !== '';
+  const hasWhatsApp = user.whatsapp && user.whatsapp.trim() !== '';
+  const hasLastName = user.name && user.name.split(' ').length > 1;
+
   const handlePayment = async () => {
     if (!user) return;
     
@@ -83,20 +90,32 @@ const PaymentModal = ({ isOpen, onClose, user, onPaymentSuccess }: PaymentModalP
             </div>
 
             <div className="text-left space-y-2">
-              <p className="text-sm font-medium">Você terá acesso a:</p>
+              <p className="text-sm font-medium">Informações disponíveis:</p>
               <ul className="text-sm text-muted-foreground space-y-1">
-                <li className="flex items-center">
-                  <Check className="h-3 w-3 mr-2 text-green-500" />
-                  Instagram do usuário
-                </li>
-                <li className="flex items-center">
-                  <Check className="h-3 w-3 mr-2 text-green-500" />
-                  WhatsApp para contato direto
-                </li>
-                <li className="flex items-center">
-                  <Check className="h-3 w-3 mr-2 text-green-500" />
-                  Acesso permanente aos dados
-                </li>
+                {hasLastName && (
+                  <li className="flex items-center">
+                    <Check className="h-3 w-3 mr-2 text-green-500" />
+                    Nome completo
+                  </li>
+                )}
+                {hasInstagram && (
+                  <li className="flex items-center">
+                    <Check className="h-3 w-3 mr-2 text-green-500" />
+                    Instagram
+                  </li>
+                )}
+                {hasWhatsApp && (
+                  <li className="flex items-center">
+                    <Check className="h-3 w-3 mr-2 text-green-500" />
+                    WhatsApp
+                  </li>
+                )}
+                {!hasInstagram && !hasWhatsApp && !hasLastName && (
+                  <li className="flex items-center text-orange-600">
+                    <X className="h-3 w-3 mr-2" />
+                    Nenhuma informação adicional cadastrada
+                  </li>
+                )}
               </ul>
             </div>
           </div>
@@ -144,16 +163,17 @@ const PaymentModal = ({ isOpen, onClose, user, onPaymentSuccess }: PaymentModalP
 interface UserCardProps {
   user: User;
   onUnlockContact: (user: User) => void;
+  isCurrentUser?: boolean;
 }
 
-const UserCard = ({ user, onUnlockContact }: UserCardProps) => {
+const UserCard = ({ user, onUnlockContact, isCurrentUser = false }: UserCardProps) => {
   const formatTimeAgo = (date: Date) => {
     const minutes = Math.floor((Date.now() - date.getTime()) / 60000);
     return `${minutes} min atrás`;
   };
 
   const hasContacts = user.instagram || user.whatsapp;
-  const showContacts = user.contactUnlocked && hasContacts;
+  const showContacts = isCurrentUser || (user.contactUnlocked && hasContacts);
 
   // Separar nome e sobrenome
   const [firstName, ...rest] = user.name.split(' ');
@@ -185,7 +205,7 @@ const UserCard = ({ user, onUnlockContact }: UserCardProps) => {
                 <div className="h-2 w-2 bg-green-500 rounded-full mr-2" />
                 {formatTimeAgo(user.checkedInAt)}
               </div>
-              {isEditingAvatar && (
+              {isEditingAvatar && isCurrentUser && (
                 <Input
                   type="file"
                   accept="image/*"
@@ -202,14 +222,16 @@ const UserCard = ({ user, onUnlockContact }: UserCardProps) => {
                   className="mt-1"
                 />
               )}
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-1"
-                onClick={() => setIsEditingAvatar(!isEditingAvatar)}
-              >
-                {isEditingAvatar ? "Salvar Foto" : "Alterar Foto"}
-              </Button>
+              {isCurrentUser && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-1"
+                  onClick={() => setIsEditingAvatar(!isEditingAvatar)}
+                >
+                  {isEditingAvatar ? "Salvar Foto" : "Alterar Foto"}
+                </Button>
+              )}
             </div>
           </div>
           
@@ -221,67 +243,61 @@ const UserCard = ({ user, onUnlockContact }: UserCardProps) => {
         </div>
 
         {/* Contact Section */}
-        {hasContacts && (
+        {!isCurrentUser && (
           <div className="mt-4 pt-4 border-t">
-            {showContacts ? (
-              <div className="space-y-2">
-                <p className="text-sm font-medium flex items-center text-green-600">
-                  <Check className="h-4 w-4 mr-1" />
-                  Contatos desbloqueados
-                </p>
-                <div className="grid grid-cols-1 gap-2">
-                  {user.instagram && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="justify-start"
-                      onClick={() => window.open(`https://instagram.com/${user.instagram?.replace('@', '')}`, '_blank')}
-                    >
-                      <Instagram className="h-4 w-4 mr-2 text-pink-500" />
-                      {user.instagram}
-                    </Button>
-                  )}
-                  {user.whatsapp && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="justify-start"
-                      onClick={() => {
-                        const cleanPhone = user.whatsapp?.replace(/\D/g, '') || '';
-                        window.open(`https://wa.me/55${cleanPhone}`, '_blank');
-                      }}
-                    >
-                      <MessageCircle className="h-4 w-4 mr-2 text-green-500" />
-                      {user.whatsapp}
-                    </Button>
-                  )}
-                </div>
+            <div className="text-center py-3">
+              <div className="flex items-center justify-center space-x-2 mb-2">
+                <Lock className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Perfil bloqueado</span>
               </div>
-            ) : (
-              <div className="text-center py-3">
-                <div className="flex items-center justify-center space-x-2 mb-2">
-                  <Lock className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">Contatos bloqueados</span>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onUnlockContact(user)}
-                  className="bg-primary/5 border-primary/20 hover:bg-primary/10"
-                >
-                  <CreditCard className="h-3 w-3 mr-1" />
-                  Desbloquear por R$ 5,00
-                </Button>
-              </div>
-            )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onUnlockContact(user)}
+                className="bg-primary/5 border-primary/20 hover:bg-primary/10"
+              >
+                <CreditCard className="h-3 w-3 mr-1" />
+                Desbloquear por R$ 5,00
+              </Button>
+            </div>
           </div>
         )}
 
-        {!hasContacts && (
-          <div className="mt-4 pt-4 border-t text-center">
-            <p className="text-sm text-muted-foreground">
-              Usuário não adicionou contatos
-            </p>
+        {isCurrentUser && hasContacts && (
+          <div className="mt-4 pt-4 border-t">
+            <div className="space-y-2">
+              <p className="text-sm font-medium flex items-center text-green-600">
+                <Check className="h-4 w-4 mr-1" />
+                Seus contatos
+              </p>
+              <div className="grid grid-cols-1 gap-2">
+                {user.instagram && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="justify-start"
+                    onClick={() => window.open(`https://instagram.com/${user.instagram?.replace('@', '')}`, '_blank')}
+                  >
+                    <Instagram className="h-4 w-4 mr-2 text-pink-500" />
+                    {user.instagram}
+                  </Button>
+                )}
+                {user.whatsapp && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="justify-start"
+                    onClick={() => {
+                      const cleanPhone = user.whatsapp?.replace(/\D/g, '') || '';
+                      window.open(`https://wa.me/55${cleanPhone}`, '_blank');
+                    }}
+                  >
+                    <MessageCircle className="h-4 w-4 mr-2 text-green-500" />
+                    {user.whatsapp}
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </CardContent>
