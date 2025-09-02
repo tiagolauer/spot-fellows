@@ -21,13 +21,27 @@ interface GeolocationHook {
   refreshLocation: () => void;
 }
 
+/**
+ * Hook para obter e gerenciar a localização geográfica do usuário.
+ * @returns {GeolocationHook} Estado e funções de localização
+ */
 export function useGeolocation(): GeolocationHook {
   const [location, setLocation] = useState<LocationData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
+  /**
+   * Realiza a geocodificação reversa para obter dados detalhados do endereço.
+   * @param {number} lat - Latitude
+   * @param {number} lon - Longitude
+   * @returns {Promise<LocationData>} Dados de localização formatados
+   */
   const reverseGeocode = async (lat: number, lon: number): Promise<LocationData> => {
+    // Validação básica de entrada
+    if (typeof lat !== 'number' || typeof lon !== 'number') {
+      throw new Error('Latitude e longitude devem ser números.');
+    }
     try {
       const response = await fetch(
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1&accept-language=pt-BR`
@@ -82,7 +96,16 @@ export function useGeolocation(): GeolocationHook {
     }
   };
 
+  /**
+   * Salva a localização do usuário no banco de dados.
+   * @param {LocationData} locationData - Dados de localização
+   */
   const saveLocationToDatabase = async (locationData: LocationData) => {
+    // Validação básica de entrada
+    if (!locationData || typeof locationData.latitude !== 'number' || typeof locationData.longitude !== 'number') {
+      console.warn('Dados de localização inválidos para salvar no banco.');
+      return;
+    }
     try {
       const { data: { user } } = await supabase.auth.getUser();
       

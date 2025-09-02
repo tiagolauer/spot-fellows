@@ -21,6 +21,10 @@ interface CheckInHook {
   refreshCheckIns: () => Promise<void>;
 }
 
+/**
+ * Hook para gerenciar check-ins do usuário.
+ * @returns {CheckInHook} Estado e funções para check-ins
+ */
 export function useCheckIns(): CheckInHook {
   const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
   const [loading, setLoading] = useState(false);
@@ -78,7 +82,21 @@ export function useCheckIns(): CheckInHook {
   };
 
   // Save a new check-in
+  /**
+   * Salva um novo check-in do usuário.
+   * @param {object} locationData - Dados de localização do check-in
+   * @returns {Promise<boolean>} Indica se o check-in foi realizado com sucesso
+   */
   const saveCheckIn = async (locationData: any): Promise<boolean> => {
+    // Validação básica de entrada
+    if (!locationData || typeof locationData !== 'object' || !('latitude' in locationData) || !('longitude' in locationData)) {
+      toast({
+        title: "Dados de localização inválidos",
+        description: "Latitude e longitude são obrigatórios.",
+        variant: "destructive"
+      });
+      return false;
+    }
     if (!canCheckIn) {
       toast({
         title: "Check-in não permitido",

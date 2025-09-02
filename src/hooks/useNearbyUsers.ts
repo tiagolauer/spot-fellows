@@ -18,12 +18,28 @@ interface NearbyUsersHook {
   refreshUsers: (lat: number, lon: number, radius?: number) => Promise<void>;
 }
 
+/**
+ * Hook para buscar e gerenciar usuários próximos.
+ * @returns {NearbyUsersHook} Estado e funções para usuários próximos
+ */
 export function useNearbyUsers(): NearbyUsersHook {
   const [users, setUsers] = useState<NearbyUser[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * Busca usuários próximos a partir de uma localização.
+   * @param {number} latitude - Latitude do usuário
+   * @param {number} longitude - Longitude do usuário
+   * @param {number} [radiusMeters=1000] - Raio de busca em metros
+   * @returns {Promise<void>}
+   */
   const refreshUsers = async (latitude: number, longitude: number, radiusMeters = 1000) => {
+    // Validação básica de entrada
+    if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+      setError('Latitude e longitude devem ser números.');
+      return;
+    }
     setLoading(true);
     setError(null);
 
