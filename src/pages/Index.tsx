@@ -1,17 +1,19 @@
 import { useState, useEffect } from "react"
-import { MapPin, Users, Clock, UserIcon, LogIn, RefreshCw, Heart } from "lucide-react"
+import { UserIcon, LogIn } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
+import { Card, CardContent } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import { useNavigate } from "react-router-dom"
-import { UserCard, PaymentModal, type User } from "@/components/UserCard"
+import { PaymentModal, type User } from "@/components/UserCard"
 import { supabase } from "@/integrations/supabase/client"
 import { Session, User as SupabaseUser } from "@supabase/supabase-js"
 import { useGeolocation } from "@/hooks/useGeolocation"
 import { useNearbyUsers } from "@/hooks/useNearbyUsers"
 import { useCheckIns } from "@/hooks/useCheckIns"
+import { ThemeToggle } from "@/components/ThemeToggle"
+import { LocationCard } from "@/components/LocationCard"
+import { CheckInButton } from "@/components/CheckInButton"
+import { NearbyUsersSection } from "@/components/NearbyUsersSection"
 
 const Index = () => {
   const [session, setSession] = useState<Session | null>(null)
@@ -188,6 +190,7 @@ const Index = () => {
               I've Been Here
             </h1>
             <div className="flex items-center space-x-2">
+              <ThemeToggle />
               <Button
                 variant="ghost"
                 size="icon"
@@ -210,175 +213,30 @@ const Index = () => {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8 space-y-8">
         {/* Location Card */}
-        <Card className="bg-gradient-card shadow-card border-0">
-          <CardContent className="p-6 text-center">
-            <div className="flex items-center justify-center mb-4">
-              <MapPin className="h-6 w-6 text-primary mr-2" />
-              <h2 className="text-xl font-semibold">
-                {locationError ? (
-                  <span className="text-destructive">{locationError}</span>
-                ) : geoLocation?.formattedAddress ? (
-                  geoLocation.formattedAddress
-                ) : (
-                  "Detectando localização..."
-                )}
-              </h2>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={refreshLocation}
-                disabled={locationLoading}
-                className="ml-2"
-              >
-                <RefreshCw className={`h-4 w-4 ${locationLoading ? 'animate-spin' : ''}`} />
-              </Button>
-            </div>
-            <p className="text-muted-foreground">Localização atual detectada</p>
-          </CardContent>
-        </Card>
+        <LocationCard 
+          location={geoLocation}
+          locationError={locationError}
+          locationLoading={locationLoading}
+          onRefresh={refreshLocation}
+        />
 
         {/* Check-in Button */}
-        <div className="flex flex-col items-center space-y-2">
-          <Button
-            variant={hasCheckedIn ? "secondary" : "default"}
-            size="lg"
-            onClick={handleCheckIn}
-            disabled={hasCheckedIn || !geoLocation || !canCheckIn}
-            className={`
-              h-24 w-64 text-xl font-bold rounded-2xl
-              ${
-                hasCheckedIn
-                  ? "bg-secondary text-secondary-foreground"
-                  : canCheckIn
-                  ? "bg-gradient-hero hover:shadow-glow animate-pulse-glow"
-                  : "bg-muted text-muted-foreground cursor-not-allowed"
-              }
-            `}
-          >
-            {hasCheckedIn ? (
-              <>
-                <Heart className="mr-2 h-6 w-6 text-pink-200" />
-                Você está aqui!
-              </>
-            ) : !canCheckIn ? (
-              <>
-                <Clock className="mr-2 h-6 w-6" />
-                Aguarde para check-in
-              </>
-            ) : (
-              "Eu estive aqui"
-            )}
-          </Button>
-          {!canCheckIn && nextCheckInTime && (
-            <p className="text-sm text-muted-foreground">
-              Próximo check-in disponível em: {Math.ceil((nextCheckInTime.getTime() - Date.now()) / 1000 / 60)} min
-            </p>
-          )}
-        </div>
+        <CheckInButton
+          hasCheckedIn={hasCheckedIn}
+          canCheckIn={canCheckIn}
+          geoLocation={geoLocation}
+          nextCheckInTime={nextCheckInTime}
+          onCheckIn={handleCheckIn}
+        />
 
         {/* Who's Here Section */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold flex items-center">
-              <Users className="h-5 w-5 mr-2 text-primary" />
-              Quem está aqui?
-              <Badge variant="secondary" className="ml-2">
-                {nearbyUsers.length}
-              </Badge>
-            </h3>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowUsers(!showUsers)}
-              disabled={nearbyUsers.length === 0}
-            >
-              {showUsers ? "Ocultar" : "Ver todos"}
-            </Button>
-          </div>
-
-          {usersLoading ? (
-            <Card className="bg-gradient-card shadow-card border-0">
-              <CardContent className="p-6 text-center">
-                <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-                <p className="text-sm text-muted-foreground">
-                  Procurando pessoas por perto...
-                </p>
-              </CardContent>
-            </Card>
-          ) : showUsers && nearbyUsers.length > 0 ? (
-            <div className="space-y-3">
-              {nearbyUsers.map(user => {
-                // Converter para o formato esperado pelo UserCard
-                const userForCard: User = {
-                  id: parseInt(user.id), // Converter UUID para number temporariamente
-                  name: user.name,
-                  avatar: user.avatar_url || `https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face`,
-                  checkedInAt: new Date(user.last_location_update),
-                  instagram: '', // Seria vindo do banco
-                  whatsapp: '', // Seria vindo do banco
-                  contactUnlocked: false
-                };
-                
-                return (
-                  <UserCard
-                    key={user.id}
-                    user={userForCard}
-                    onUnlockContact={handleUnlockContact}
-                    isCurrentUser={false}
-                  />
-                );
-              })}
-            </div>
-          ) : !showUsers ? (
-            <Card className="bg-gradient-card shadow-card border-0">
-              <CardContent className="p-6 text-center">
-                <div className="flex items-center justify-center space-x-2 mb-2">
-                  {nearbyUsers.length > 0 ? (
-                    <>
-                      <div className="flex -space-x-2">
-                        {nearbyUsers.slice(0, 3).map((user, index) => (
-                          <Avatar
-                            key={index}
-                            className="h-8 w-8 border-2 border-background"
-                          >
-                            <AvatarImage src={user.avatar_url} />
-                            <AvatarFallback className="bg-gradient-primary text-primary-foreground text-xs font-bold">
-                              {user.name.split(' ').map(n => n[0]).join('')}
-                            </AvatarFallback>
-                          </Avatar>
-                        ))}
-                      </div>
-                      <Badge
-                        variant="secondary"
-                        className="bg-primary/10 text-primary border-primary/20"
-                      >
-                        {nearbyUsers.length}
-                      </Badge>
-                    </>
-                  ) : (
-                    <Users className="h-12 w-12 text-muted-foreground/50" />
-                  )}
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {nearbyUsers.length === 0
-                    ? "Nenhuma pessoa por perto no momento"
-                    : nearbyUsers.length === 1
-                    ? "pessoa está aqui agora"
-                    : "pessoas estão aqui agora"}
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card className="bg-gradient-card shadow-card border-0">
-              <CardContent className="p-6 text-center">
-                <Users className="h-12 w-12 mx-auto mb-2 text-muted-foreground/50" />
-                <p className="text-sm text-muted-foreground">
-                  Nenhuma pessoa encontrada por perto
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+        <NearbyUsersSection
+          nearbyUsers={nearbyUsers}
+          usersLoading={usersLoading}
+          showUsers={showUsers}
+          onToggleUsers={() => setShowUsers(!showUsers)}
+          onUnlockContact={handleUnlockContact}
+        />
 
         {/* Payment Modal */}
         <PaymentModal
