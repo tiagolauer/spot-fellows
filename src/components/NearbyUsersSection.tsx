@@ -48,7 +48,7 @@ export function NearbyUsersSection({
       </div>
 
       {usersLoading ? (
-        <Card className="bg-gradient-card shadow-card border-0">
+        <Card className="bg-card/80 backdrop-blur-sm shadow-card border">
           <CardContent className="p-6 text-center">
             <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
             <p className="text-sm text-muted-foreground">
@@ -80,7 +80,7 @@ export function NearbyUsersSection({
           })}
         </div>
       ) : !showUsers ? (
-        <Card className="bg-gradient-card shadow-card border-0">
+        <Card className="bg-card/80 backdrop-blur-sm shadow-card border">
           <CardContent className="p-6 text-center">
             <div className="flex items-center justify-center space-x-2 mb-2">
               {nearbyUsers.length > 0 ? (
@@ -92,7 +92,7 @@ export function NearbyUsersSection({
                         className="h-8 w-8 border-2 border-background"
                       >
                         <AvatarImage src={user.avatar_url} />
-                        <AvatarFallback className="bg-gradient-primary text-primary-foreground text-xs font-bold">
+                        <AvatarFallback className="bg-primary text-primary-foreground text-xs font-bold">
                           {user.name.split(' ').map(n => n[0]).join('')}
                         </AvatarFallback>
                       </Avatar>
@@ -119,7 +119,7 @@ export function NearbyUsersSection({
           </CardContent>
         </Card>
       ) : (
-        <Card className="bg-gradient-card shadow-card border-0">
+        <Card className="bg-card/80 backdrop-blur-sm shadow-card border">
           <CardContent className="p-6 text-center">
             <Users className="h-12 w-12 mx-auto mb-2 text-muted-foreground/50" />
             <p className="text-sm text-muted-foreground">

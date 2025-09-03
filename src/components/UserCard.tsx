@@ -183,7 +183,7 @@ const UserCard = ({ user, onUnlockContact, isCurrentUser = false }: UserCardProp
   const [isEditingAvatar, setIsEditingAvatar] = useState(false);
 
   return (
-    <Card className="bg-gradient-card shadow-card border-0">
+    <Card className="bg-card/80 backdrop-blur-sm shadow-card border">
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">

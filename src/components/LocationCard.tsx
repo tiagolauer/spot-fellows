@@ -13,11 +13,11 @@ interface LocationCardProps {
 
 export function LocationCard({ location, locationError, locationLoading, onRefresh }: LocationCardProps) {
   return (
-    <Card className="bg-gradient-card shadow-card border-0">
+    <Card className="bg-card/80 backdrop-blur-sm shadow-card border">
       <CardContent className="p-6 text-center">
         <div className="flex items-center justify-center mb-4">
           <MapPin className="h-6 w-6 text-primary mr-2" />
-          <h2 className="text-xl font-semibold">
+          <h2 className="text-xl font-semibold text-card-foreground">
             {locationError ? (
               <span className="text-destructive">{locationError}</span>
             ) : location?.formattedAddress ? (

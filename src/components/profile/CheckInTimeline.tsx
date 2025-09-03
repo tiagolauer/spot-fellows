@@ -13,7 +13,7 @@ interface CheckInTimelineProps {
 
 export function CheckInTimeline({ checkIns }: CheckInTimelineProps) {
   return (
-    <Card className="bg-gradient-card shadow-card border-0">
+    <Card className="bg-card/80 backdrop-blur-sm shadow-card border">
       <CardHeader>
         <CardTitle className="flex items-center">
           <MapPin className="h-5 w-5 mr-2 text-primary" />

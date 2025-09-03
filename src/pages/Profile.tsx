@@ -95,7 +95,7 @@ const Profile = () => {
 
       <main className="container mx-auto px-4 py-6 space-y-6">
         {/* Profile Card */}
-        <Card className="bg-gradient-card shadow-card border-0">
+        <Card className="bg-card/80 backdrop-blur-sm shadow-card border">
           <CardContent className="p-6">
             <div className="flex flex-col items-center text-center space-y-4">
               <Avatar className="h-24 w-24">

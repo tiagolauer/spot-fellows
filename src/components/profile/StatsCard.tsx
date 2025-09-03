@@ -8,7 +8,7 @@ interface StatsCardProps {
 
 export function StatsCard({ totalCheckins, placesVisited, joinedDate }: StatsCardProps) {
   return (
-    <Card className="bg-gradient-card shadow-card border-0">
+    <Card className="bg-card/80 backdrop-blur-sm shadow-card border">
       <CardHeader>
         <CardTitle>Estatísticas</CardTitle>
       </CardHeader>

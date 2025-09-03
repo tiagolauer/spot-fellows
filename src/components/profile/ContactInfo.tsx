@@ -33,7 +33,7 @@ export function ContactInfo({ profile, editProfile, isEditing, onUpdateEdit }: C
   };
 
   return (
-    <Card className="bg-gradient-card shadow-card border-0">
+    <Card className="bg-card/80 backdrop-blur-sm shadow-card border">
       <CardHeader>
         <CardTitle className="flex items-center">
           <MessageCircle className="h-5 w-5 mr-2 text-primary" />
