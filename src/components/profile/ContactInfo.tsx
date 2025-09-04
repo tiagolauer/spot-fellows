@@ -28,7 +28,9 @@ export function ContactInfo({ profile, editProfile, isEditing, onUpdateEdit }: C
   };
 
   const handleWhatsAppChange = (value: string) => {
-    const formatted = formatWhatsApp(value);
+    // Sanitiza o input removendo caracteres especiais perigosos
+    const sanitized = value.replace(/[<>'"&]/g, '');
+    const formatted = formatWhatsApp(sanitized);
     onUpdateEdit?.('whatsapp', formatted);
   };
 
@@ -48,11 +50,16 @@ export function ContactInfo({ profile, editProfile, isEditing, onUpdateEdit }: C
                 <Instagram className="h-4 w-4 mr-2 text-pink-500" />
                 Instagram
               </Label>
-              <Input
+               <Input
                 id="instagram"
                 value={editProfile?.instagram || ''}
-                onChange={(e) => onUpdateEdit?.('instagram', e.target.value)}
+                onChange={(e) => {
+                  // Sanitiza o input do Instagram
+                  const sanitized = e.target.value.replace(/[<>'"&]/g, '');
+                  onUpdateEdit?.('instagram', sanitized);
+                }}
                 placeholder="@seuusuario"
+                maxLength={30}
                 className="mt-1"
               />
             </div>
@@ -61,11 +68,12 @@ export function ContactInfo({ profile, editProfile, isEditing, onUpdateEdit }: C
                 <MessageCircle className="h-4 w-4 mr-2 text-green-500" />
                 WhatsApp
               </Label>
-              <Input
+               <Input
                 id="whatsapp"
                 value={editProfile?.whatsapp || ''}
                 onChange={(e) => handleWhatsAppChange(e.target.value)}
                 placeholder="(11) 99999-9999"
+                maxLength={15}
                 className="mt-1"
               />
             </div>

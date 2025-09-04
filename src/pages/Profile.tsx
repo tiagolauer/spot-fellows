@@ -130,22 +130,32 @@ const Profile = () => {
                   </div>
                     <div>
                       <Label htmlFor="name">Nome</Label>
-                      <Input
-                        id="name"
-                        value={editProfile.name}
-                        onChange={(e) => updateEditProfile('name', e.target.value)}
-                        className="mt-1"
+                     <Input
+                       id="name"
+                       value={editProfile.name}
+                       onChange={(e) => {
+                         // Sanitiza o input do nome
+                         const sanitized = e.target.value.replace(/[<>'"&]/g, '');
+                         updateEditProfile('name', sanitized);
+                       }}
+                       maxLength={100}
+                       className="mt-1"
                       />
                     </div>
                     <div>
                       <Label htmlFor="bio">Bio</Label>
-                      <Textarea
-                        id="bio"
-                        value={editProfile.bio}
-                        onChange={(e) => updateEditProfile('bio', e.target.value)}
-                        placeholder="Conte um pouco sobre você..."
-                        className="mt-1 resize-none"
-                        rows={3}
+                       <Textarea
+                         id="bio"
+                         value={editProfile.bio}
+                         onChange={(e) => {
+                           // Sanitiza o input da bio
+                           const sanitized = e.target.value.replace(/[<>'"&]/g, '');
+                           updateEditProfile('bio', sanitized);
+                         }}
+                         placeholder="Conte um pouco sobre você..."
+                         maxLength={500}
+                         className="mt-1 resize-none"
+                         rows={3}
                       />
                     </div>
                 </div>

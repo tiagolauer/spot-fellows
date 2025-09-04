@@ -150,6 +150,7 @@ export function SignUpForm() {
               type={showPassword ? "text" : "password"}
               placeholder="Crie uma senha forte"
               autoComplete="new-password"
+              maxLength={128}
               {...register("password")}
               className={errors.password ? "border-destructive focus-visible:ring-destructive pr-10" : "pr-10"}
             />
@@ -180,6 +181,7 @@ export function SignUpForm() {
               type={showConfirmPassword ? "text" : "password"}
               placeholder="Digite a senha novamente"
               autoComplete="new-password"
+              maxLength={128}
               {...register("confirmPassword")}
               className={errors.confirmPassword ? "border-destructive focus-visible:ring-destructive pr-10" : "pr-10"}
             />

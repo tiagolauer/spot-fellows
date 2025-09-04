@@ -64,13 +64,8 @@ export function useNearbyUsers(): NearbyUsersHook {
       }
 
       // Filtrar usuários que fizeram check-in nos últimos 5 minutos
-      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-      const recentUsers = (data || []).filter((user: NearbyUser) => {
-        const lastUpdate = new Date(user.last_location_update);
-        return lastUpdate >= fiveMinutesAgo;
-      });
-
-      setUsers(recentUsers);
+      // (já está sendo feito na função do banco de dados)
+      setUsers(data || []);
     } catch (error) {
       console.error('Erro ao buscar usuários próximos:', error);
       setError('Erro inesperado ao buscar usuários');

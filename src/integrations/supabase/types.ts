@@ -641,11 +641,17 @@ export type Database = {
         Returns: unknown
       }
       get_nearby_users: {
-        Args: {
-          radius_meters?: number
-          user_latitude: number
-          user_longitude: number
-        }
+        Args:
+          | {
+              radius_meters?: number
+              user_latitude: number
+              user_longitude: number
+            }
+          | {
+              radius_meters?: number
+              user_latitude: number
+              user_longitude: number
+            }
         Returns: {
           avatar_url: string
           distance_meters: number
