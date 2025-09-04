@@ -59,15 +59,16 @@ export function NearbyUsersSection({
       ) : showUsers && nearbyUsers.length > 0 ? (
         <div className="space-y-3">
           {nearbyUsers.map(user => {
-            const userForCard: User = {
-              id: parseInt(user.id),
-              name: user.name,
-              avatar: user.avatar_url || `https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face`,
-              checkedInAt: new Date(user.last_location_update),
-              instagram: '',
-              whatsapp: '',
-              contactUnlocked: false
-            };
+             const userForCard: User = {
+               id: parseInt(user.id),
+               name: user.name,
+               avatar: user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase(),
+               avatarUrl: user.avatar_url,
+               checkedInAt: new Date(user.last_location_update),
+               instagram: '',
+               whatsapp: '',
+               contactUnlocked: false
+             };
             
             return (
               <UserCard

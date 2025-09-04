@@ -12,6 +12,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { ContactInfo } from "@/components/profile/ContactInfo";
 import { StatsCard } from "@/components/profile/StatsCard";
 import { CheckInTimeline } from "@/components/profile/CheckInTimeline";
+import { sanitizeInput, validateProfileData } from "@/lib/security";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -135,8 +136,13 @@ const Profile = () => {
                        value={editProfile.name}
                        onChange={(e) => {
                          // Sanitiza o input do nome
-                         const sanitized = e.target.value.replace(/[<>'"&]/g, '');
-                         updateEditProfile('name', sanitized);
+                         const sanitized = sanitizeInput(e.target.value);
+                         
+                         // Valida dados do perfil
+                         const validation = validateProfileData({ name: sanitized });
+                         if (validation.isValid || sanitized === '') {
+                           updateEditProfile('name', sanitized);
+                         }
                        }}
                        maxLength={100}
                        className="mt-1"
@@ -149,8 +155,13 @@ const Profile = () => {
                          value={editProfile.bio}
                          onChange={(e) => {
                            // Sanitiza o input da bio
-                           const sanitized = e.target.value.replace(/[<>'"&]/g, '');
-                           updateEditProfile('bio', sanitized);
+                           const sanitized = sanitizeInput(e.target.value);
+                           
+                           // Valida dados do perfil
+                           const validation = validateProfileData({ bio: sanitized });
+                           if (validation.isValid || sanitized === '') {
+                             updateEditProfile('bio', sanitized);
+                           }
                          }}
                          placeholder="Conte um pouco sobre você..."
                          maxLength={500}

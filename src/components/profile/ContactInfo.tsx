@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { sanitizeInput, validateProfileData } from "@/lib/security"
 
 interface ContactInfoProps {
   profile: {
@@ -29,9 +30,14 @@ export function ContactInfo({ profile, editProfile, isEditing, onUpdateEdit }: C
 
   const handleWhatsAppChange = (value: string) => {
     // Sanitiza o input removendo caracteres especiais perigosos
-    const sanitized = value.replace(/[<>'"&]/g, '');
+    const sanitized = sanitizeInput(value);
     const formatted = formatWhatsApp(sanitized);
-    onUpdateEdit?.('whatsapp', formatted);
+    
+    // Valida o formato do telefone
+    const validation = validateProfileData({ whatsapp: formatted });
+    if (validation.isValid || formatted === '') {
+      onUpdateEdit?.('whatsapp', formatted);
+    }
   };
 
   return (
@@ -55,8 +61,13 @@ export function ContactInfo({ profile, editProfile, isEditing, onUpdateEdit }: C
                 value={editProfile?.instagram || ''}
                 onChange={(e) => {
                   // Sanitiza o input do Instagram
-                  const sanitized = e.target.value.replace(/[<>'"&]/g, '');
-                  onUpdateEdit?.('instagram', sanitized);
+                  const sanitized = sanitizeInput(e.target.value);
+                  
+                  // Valida dados do perfil
+                  const validation = validateProfileData({ instagram: sanitized });
+                  if (validation.isValid || sanitized === '') {
+                    onUpdateEdit?.('instagram', sanitized);
+                  }
                 }}
                 placeholder="@seuusuario"
                 maxLength={30}
