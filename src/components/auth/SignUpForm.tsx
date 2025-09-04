@@ -95,13 +95,14 @@ export function SignUpForm() {
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="firstName">Nome</Label>
-            <Input
-              id="firstName"
-              type="text"
-              placeholder="João"
-              autoComplete="given-name"
-              {...register("firstName")}
-              className={errors.firstName ? "border-destructive focus-visible:ring-destructive" : ""}
+        <Input
+          id="firstName"
+          type="text"
+          placeholder="João"
+          autoComplete="given-name"
+          maxLength={50}
+          {...register("firstName")}
+          className={errors.firstName ? "border-destructive focus-visible:ring-destructive" : ""}
             />
             {errors.firstName && (
               <p className="text-xs text-destructive">{errors.firstName.message}</p>
@@ -110,13 +111,14 @@ export function SignUpForm() {
 
           <div className="space-y-2">
             <Label htmlFor="lastName">Sobrenome</Label>
-            <Input
-              id="lastName"
-              type="text"
-              placeholder="Silva"
-              autoComplete="family-name"
-              {...register("lastName")}
-              className={errors.lastName ? "border-destructive focus-visible:ring-destructive" : ""}
+        <Input
+          id="lastName"
+          type="text"
+          placeholder="Silva"
+          autoComplete="family-name"
+          maxLength={50}
+          {...register("lastName")}
+          className={errors.lastName ? "border-destructive focus-visible:ring-destructive" : ""}
             />
             {errors.lastName && (
               <p className="text-xs text-destructive">{errors.lastName.message}</p>
@@ -126,13 +128,14 @@ export function SignUpForm() {
 
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            type="email"
-            placeholder="seu@email.com"
-            autoComplete="email"
-            {...register("email")}
-            className={errors.email ? "border-destructive focus-visible:ring-destructive" : ""}
+        <Input
+          id="email"
+          type="email"
+          placeholder="seu@email.com"
+          autoComplete="email"
+          maxLength={254}
+          {...register("email")}
+          className={errors.email ? "border-destructive focus-visible:ring-destructive" : ""}
           />
           {errors.email && (
             <p className="text-sm text-destructive">{errors.email.message}</p>

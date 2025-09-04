@@ -79,6 +79,7 @@ export function LoginForm() {
           type="email"
           placeholder="seu@email.com"
           autoComplete="email"
+          maxLength={254}
           {...register("email")}
           className={errors.email ? "border-destructive focus-visible:ring-destructive" : ""}
         />
@@ -95,6 +96,7 @@ export function LoginForm() {
             type={showPassword ? "text" : "password"}
             placeholder="Digite sua senha"
             autoComplete="current-password"
+            maxLength={128}
             {...register("password")}
             className={errors.password ? "border-destructive focus-visible:ring-destructive pr-10" : "pr-10"}
           />

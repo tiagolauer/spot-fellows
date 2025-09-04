@@ -179,8 +179,6 @@ const UserCard = ({ user, onUnlockContact, isCurrentUser = false }: UserCardProp
   const [firstName, ...rest] = user.name.split(' ');
   const lastName = rest.join(' ');
 
-  const [editAvatarUrl, setEditAvatarUrl] = useState(user.avatarUrl || "");
-  const [isEditingAvatar, setIsEditingAvatar] = useState(false);
 
   return (
     <Card className="bg-card/80 backdrop-blur-sm shadow-card border">
@@ -188,8 +186,8 @@ const UserCard = ({ user, onUnlockContact, isCurrentUser = false }: UserCardProp
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <Avatar className="h-12 w-12">
-              {editAvatarUrl || user.avatarUrl ? (
-                <AvatarImage src={editAvatarUrl || user.avatarUrl} />
+              {user.avatarUrl ? (
+                <AvatarImage src={user.avatarUrl} />
               ) : (
                 <AvatarFallback className="bg-gradient-primary text-primary-foreground font-bold">
                   {user.avatar}
@@ -205,33 +203,6 @@ const UserCard = ({ user, onUnlockContact, isCurrentUser = false }: UserCardProp
                 <div className="h-2 w-2 bg-green-500 rounded-full mr-2" />
                 {formatTimeAgo(user.checkedInAt)}
               </div>
-              {isEditingAvatar && isCurrentUser && (
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={e => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      const reader = new FileReader();
-                      reader.onload = (ev) => {
-                        setEditAvatarUrl(ev.target?.result as string);
-                      };
-                      reader.readAsDataURL(file);
-                    }
-                  }}
-                  className="mt-1"
-                />
-              )}
-              {isCurrentUser && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-1"
-                  onClick={() => setIsEditingAvatar(!isEditingAvatar)}
-                >
-                  {isEditingAvatar ? "Salvar Foto" : "Alterar Foto"}
-                </Button>
-              )}
             </div>
           </div>
           
