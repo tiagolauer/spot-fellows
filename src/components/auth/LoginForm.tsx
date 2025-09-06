@@ -9,6 +9,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { supabase } from "@/integrations/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { loginSchema, type LoginFormData } from "@/lib/validation"
+import { AuthRateLimit } from "@/lib/securityHeaders"
+import { securityMonitor, SecurityEventType } from "@/lib/securityMonitor"
 
 export function LoginForm() {
   const [loading, setLoading] = useState(false)
@@ -28,6 +30,16 @@ export function LoginForm() {
     setLoading(true)
     setError(null)
 
+    // Check rate limiting for security
+    const identifier = data.email.toLowerCase();
+    if (!AuthRateLimit.checkLimit(identifier)) {
+      const remainingTime = AuthRateLimit.getRemainingTime(identifier);
+      const minutes = Math.ceil(remainingTime / (1000 * 60));
+      setError(`Muitas tentativas de login. Tente novamente em ${minutes} minutos.`);
+      setLoading(false);
+      return;
+    }
+
     try {
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: data.email,
@@ -35,6 +47,15 @@ export function LoginForm() {
       })
 
       if (signInError) {
+        // Log security events for monitoring
+        securityMonitor.log(
+          SecurityEventType.LOGIN_FAILED,
+          `Login failed: ${signInError.message}`,
+          'medium',
+          undefined,
+          identifier
+        );
+        
         switch (signInError.message) {
           case "Invalid login credentials":
             setError("Email ou senha incorretos")
@@ -50,6 +71,18 @@ export function LoginForm() {
         }
         return
       }
+
+      // Reset rate limit on successful login
+      AuthRateLimit.reset(identifier);
+
+      // Log successful login
+      securityMonitor.log(
+        SecurityEventType.LOGIN_SUCCESS,
+        `User logged in successfully`,
+        'low',
+        undefined,
+        identifier
+      );
 
       toast({
         title: "Login realizado com sucesso!",

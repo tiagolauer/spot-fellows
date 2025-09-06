@@ -88,15 +88,30 @@ export function useCheckIns(): CheckInHook {
    * @returns {Promise<boolean>} Indica se o check-in foi realizado com sucesso
    */
   const saveCheckIn = async (locationData: any): Promise<boolean> => {
-    // Validação básica de entrada
-    if (!locationData || typeof locationData !== 'object' || !('latitude' in locationData) || !('longitude' in locationData)) {
+    // Enhanced security validation
+    if (!locationData || typeof locationData !== 'object') {
       toast({
-        title: "Dados de localização inválidos",
-        description: "Latitude e longitude são obrigatórios.",
+        title: "Dados inválidos",
+        description: "Dados de localização são obrigatórios.",
         variant: "destructive"
       });
       return false;
     }
+
+    // Validate coordinates with proper type checking and ranges
+    const { latitude, longitude } = locationData;
+    if (typeof latitude !== 'number' || typeof longitude !== 'number' || 
+        isNaN(latitude) || isNaN(longitude) ||
+        latitude < -90 || latitude > 90 || 
+        longitude < -180 || longitude > 180) {
+      toast({
+        title: "Coordenadas inválidas",
+        description: "Latitude e longitude devem ser números válidos.",
+        variant: "destructive"
+      });
+      return false;
+    }
+
     if (!canCheckIn) {
       toast({
         title: "Check-in não permitido",
@@ -107,16 +122,22 @@ export function useCheckIns(): CheckInHook {
     }
 
     try {
+      // Sanitize string inputs to prevent injection
+      const sanitizeString = (str: any) => {
+        if (typeof str !== 'string') return null;
+        return str.trim().substring(0, 255); // Limit length
+      };
+
       const { error } = await supabase.rpc('save_checkin', {
-        p_latitude: locationData.latitude,
-        p_longitude: locationData.longitude,
-        p_street_name: locationData.street || null,
-        p_street_number: locationData.houseNumber || null,
-        p_city: locationData.city || null,
-        p_state: locationData.state || null,
-        p_country: locationData.country || null,
-        p_postal_code: locationData.postalCode || null,
-        p_formatted_address: locationData.formattedAddress || null
+        p_latitude: latitude,
+        p_longitude: longitude,
+        p_street_name: sanitizeString(locationData.street),
+        p_street_number: sanitizeString(locationData.houseNumber),
+        p_city: sanitizeString(locationData.city),
+        p_state: sanitizeString(locationData.state),
+        p_country: sanitizeString(locationData.country),
+        p_postal_code: sanitizeString(locationData.postalCode),
+        p_formatted_address: sanitizeString(locationData.formattedAddress)
       });
 
       if (error) {

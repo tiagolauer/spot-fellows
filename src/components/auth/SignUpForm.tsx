@@ -12,6 +12,8 @@ import { useToast } from "@/hooks/use-toast"
 import { signUpSchema, type SignUpFormData } from "@/lib/validation"
 import { TermsModal } from "@/components/legal/TermsModal"
 import { PrivacyModal } from "@/components/legal/PrivacyModal"
+import { AuthRateLimit } from "@/lib/securityHeaders"
+import { securityMonitor, SecurityEventType } from "@/lib/securityMonitor"
 
 export function SignUpForm() {
   const [loading, setLoading] = useState(false)
@@ -38,6 +40,22 @@ export function SignUpForm() {
     setLoading(true)
     setError(null)
 
+    // Check rate limiting for security
+    const identifier = data.email.toLowerCase();
+    if (!AuthRateLimit.checkLimit(`signup:${identifier}`, 3, 24 * 60 * 60 * 1000)) {
+      setError("Muitas tentativas de cadastro. Tente novamente amanhã.");
+      setLoading(false);
+      return;
+    }
+
+    // Additional security checks
+    const commonPasswords = ['password', '123456', 'qwerty', 'admin', '12345678'];
+    if (commonPasswords.includes(data.password.toLowerCase())) {
+      setError("Esta senha é muito comum. Escolha uma senha mais segura.");
+      setLoading(false);
+      return;
+    }
+
     try {
       const redirectUrl = `${window.location.origin}/`
       
@@ -54,6 +72,15 @@ export function SignUpForm() {
       })
 
       if (signUpError) {
+        // Log security events for monitoring
+        securityMonitor.log(
+          SecurityEventType.SIGNUP_FAILED,
+          `Signup failed: ${signUpError.message}`,
+          'medium',
+          undefined,
+          identifier
+        );
+        
         switch (signUpError.message) {
           case "User already registered":
             setError("Este email já está cadastrado. Tente fazer login")
@@ -64,11 +91,26 @@ export function SignUpForm() {
           case "Signup is disabled":
             setError("Cadastro está temporariamente desabilitado")
             break
+          case "Invalid email":
+            setError("Email inválido")
+            break
           default:
             setError(`Erro ao criar conta: ${signUpError.message}`)
         }
         return
       }
+
+      // Reset rate limit on successful signup
+      AuthRateLimit.reset(`signup:${identifier}`);
+
+      // Log successful signup
+      securityMonitor.log(
+        SecurityEventType.SIGNUP_SUCCESS,
+        `User signed up successfully`,
+        'low',
+        undefined,
+        identifier
+      );
 
       toast({
         title: "Conta criada com sucesso!",

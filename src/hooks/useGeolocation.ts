@@ -38,13 +38,33 @@ export function useGeolocation(): GeolocationHook {
    * @returns {Promise<LocationData>} Dados de localização formatados
    */
   const reverseGeocode = async (lat: number, lon: number): Promise<LocationData> => {
-    // Validação básica de entrada
-    if (typeof lat !== 'number' || typeof lon !== 'number') {
-      throw new Error('Latitude e longitude devem ser números.');
+    // Enhanced security validation
+    if (typeof lat !== 'number' || typeof lon !== 'number' || isNaN(lat) || isNaN(lon)) {
+      throw new Error('Latitude e longitude devem ser números válidos.');
     }
+    
+    // Validate coordinate ranges for security
+    if (lat < -90 || lat > 90) {
+      throw new Error('Latitude inválida: deve estar entre -90 e 90.');
+    }
+    
+    if (lon < -180 || lon > 180) {
+      throw new Error('Longitude inválida: deve estar entre -180 e 180.');
+    }
+    
     try {
+      // Encode parameters to prevent injection
+      const encodedLat = encodeURIComponent(lat.toString());
+      const encodedLon = encodeURIComponent(lon.toString());
+      
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1&accept-language=pt-BR`
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${encodedLat}&lon=${encodedLon}&zoom=18&addressdetails=1&accept-language=pt-BR`,
+        {
+          method: 'GET',
+          headers: {
+            'User-Agent': 'Location-App/1.0'
+          }
+        }
       );
 
       if (!response.ok) {
